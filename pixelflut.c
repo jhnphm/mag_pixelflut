@@ -113,9 +113,24 @@ void render(int sockfd, struct dimensions* dim){
     const size_t SENDBUF_SZ = SEND_SZ*dim->w*dim->h;
     int retval = -1;
     char* sendbuf = malloc(SENDBUF_SZ);
+    size_t offset = 0;
+
+    memcpy(sendbuf + offset, "OFFSET ", 7);
+    offset += 7;
+    memcpy(sendbuf + offset, DEC_LUT[dim->x].str, DEC_LUT[dim->x].len);
+    offset+=DEC_LUT[dim->x].len;
+    sendbuf[offset] = ' ';
+    offset++;
+    memcpy(sendbuf + offset, DEC_LUT[dim->y].str, DEC_LUT[dim->y].len);
+    offset+=DEC_LUT[dim->y].len;
+    sendbuf[offset] = '\n';
+    offset++;
+    sendbuf[offset]=0;
+    send(sockfd, sendbuf, offset, 0);
+
 
     while(1){
-        size_t offset = 0;
+        offset = 0;
         for(int j = 0; j< dim->h; j++){
             for(int i = 0; i< dim->w; i++){
                 // essentially a shader prog
@@ -128,12 +143,12 @@ void render(int sockfd, struct dimensions* dim){
                 memcpy(sendbuf + offset, "PX ", 3);
                 index += 3;
 
-                memcpy(sendbuf + offset+index, DEC_LUT[i+dim->x].str, DEC_LUT[i+dim->x].len);
-                index+=DEC_LUT[i+dim->x].len;
+                memcpy(sendbuf + offset+index, DEC_LUT[i].str, DEC_LUT[i].len);
+                index+=DEC_LUT[i].len;
                 sendbuf[offset+index] = ' ';
                 index++;
-                memcpy(sendbuf + offset+index, DEC_LUT[j+dim->y].str, DEC_LUT[j+dim->y].len);
-                index+=DEC_LUT[j+dim->y].len;
+                memcpy(sendbuf + offset+index, DEC_LUT[j].str, DEC_LUT[j].len);
+                index+=DEC_LUT[j].len;
                 sendbuf[offset+index] = ' ';
                 index++;
 
@@ -251,7 +266,7 @@ const AVRational* time_base,
         tdelay = tdelay > 0 ? tdelay : 0;
         //printf("%" PRIx64 "\n", tdelay);
         
-        usleep(tdelay);
+        usleep(tdelay*2);
 
         *last_ts= frame->pts;
         *tlast = tcurrent;
@@ -277,6 +292,7 @@ void* vidthread(void* params){
 
     av_register_all();
     avcodec_register_all();
+    avformat_network_init();
 
     puts(fname);
     rval = avformat_open_input(&fmt_ctx, fname, NULL, NULL);
