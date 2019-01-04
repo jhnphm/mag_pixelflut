@@ -14,8 +14,8 @@
 #include <libavformat/avformat.h>
 #include <sys/time.h>
 
-//#define PIXELFLUT_ADDR "10.13.38.233"
-#define PIXELFLUT_ADDR "localhost"
+#define PIXELFLUT_ADDR "10.13.38.233"
+//#define PIXELFLUT_ADDR "localhost"
 #define PIXELFLUT_PORT "1234"
 
 #define PIXELFLUT_MOVIE "shining.mp4"
@@ -35,6 +35,8 @@ struct vidbuf {
 };
 
 struct dimensions {
+    uint32_t tw;
+    uint32_t th;
     uint32_t w;
     uint32_t h;
     uint32_t x;
@@ -44,7 +46,7 @@ struct dimensions {
 struct vidbuf* vidbuf;
 
 
-int bw_shader(void* param, int x, int y){
+static int bw_shader(void* param, int x, int y){
   //  struct dimensions* dim = param;
 
   //  const int w = dim->w;
@@ -59,15 +61,30 @@ int bw_shader(void* param, int x, int y){
   //  if(ii*ii + jj*jj < 50){
   //      gg = 0xFF;
   //  }
-    if (vidbuf == 0){
+    struct dimensions* dim = param;
+
+
+    if (vidbuf == NULL){
         return 0;
     }
+
+    const size_t vid_height = vidbuf->len/vidbuf->linewidth;
+    const size_t vid_width = vidbuf->linewidth;
+
+    
+
+
+   x = x* vid_width/dim->tw ;
+   y = y* vid_height/dim->th ;
+
     if ( x >= vidbuf->linewidth){
         return 0;
     }
-    if ( y >= vidbuf->len/vidbuf->linewidth){
+    if ( y >= vid_height){
         return 0;
     }
+    
+
     return vidbuf->buf[x+y*vidbuf->linewidth];
 }
 
@@ -75,12 +92,12 @@ int bw_shader(void* param, int x, int y){
 int parse_size(struct dimensions* dim, char* str, size_t len){
     if(0 == memcmp(str, "SIZE ", 5)){
         char* endptr;
-        dim->w = strtol(str+5, &endptr, 10);
-        dim->h = strtol(endptr, &endptr, 10);
-        if(dim->w == 0 || dim->h == 0){
+        dim->tw = strtol(str+5, &endptr, 10);
+        dim->th = strtol(endptr, &endptr, 10);
+        if(dim->tw == 0 || dim->th == 0){
             goto failsize;
         }
-        if(dim->w > MAX_DIM || dim->h > MAX_DIM){
+        if(dim->tw > MAX_DIM || dim->th > MAX_DIM){
             goto failsize;
         }
     }else{
@@ -173,8 +190,13 @@ void* netthread(void* params){
     struct dimensions gfxsize = {0};
     rval = parse_size(&gfxsize, recvbuf, sizeof(recvbuf));
 
-    gfxsize.x = gfxsize.w/THREADS * id;
-    gfxsize.w = gfxsize.w/THREADS;
+    gfxsize.tw /= 2;
+    gfxsize.th /= 2;
+    gfxsize.w = gfxsize.tw;
+    gfxsize.h = gfxsize.th;
+
+    gfxsize.x = gfxsize.tw/THREADS * id;
+    gfxsize.w = gfxsize.tw/THREADS;
     if(rval != 0){
         goto failsize;
     }
