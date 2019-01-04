@@ -1,5 +1,5 @@
 %clang
 %c -std=gnu11
 %cpp -std=gnu++14
--pthread
+-pthread -I/usr/include/x86_64-linux-gnu -lavcodec -lavformat -lswscale -lavutil
 
