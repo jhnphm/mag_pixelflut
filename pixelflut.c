@@ -14,8 +14,8 @@
 #include <libavformat/avformat.h>
 #include <sys/time.h>
 
-#define PIXELFLUT_ADDR "10.13.38.233"
-//#define PIXELFLUT_ADDR "localhost"
+//#define PIXELFLUT_ADDR "10.13.38.233"
+#define PIXELFLUT_ADDR "localhost"
 #define PIXELFLUT_PORT "1234"
 
 #define PIXELFLUT_MOVIE "shining.mp4"
@@ -24,7 +24,7 @@
 #define RECV_SZ (4+1+5+1+5+1) // actual size needed is 24, assuming 5 chars for res (overkill)
 #define SEND_SZ (2+1+5+1+5+1+8+1)  // actual size needed is 24, assuming 8 chars for res (overkill)
 
-#define THREADS 100
+#define THREADS 10
 
 #include "lut.h"
 
@@ -131,9 +131,9 @@ void render(int sockfd, struct dimensions* dim){
                     break;
                 }
             }
-            sendbuf[offset] = 0;
-            send(sockfd, sendbuf, offset, 0);
         }
+        sendbuf[offset] = 0;
+        send(sockfd, sendbuf, offset, 0);
     }
     // never gets here
     free(sendbuf);
