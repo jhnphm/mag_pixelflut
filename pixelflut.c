@@ -24,7 +24,9 @@
 #define RECV_SZ (4+1+5+1+5+1) // actual size needed is 24, assuming 5 chars for res (overkill)
 #define SEND_SZ (2+1+5+1+5+1+8+1)  // actual size needed is 24, assuming 8 chars for res (overkill)
 
-#define THREADS 42
+#define THREADS 100
+
+#include "lut.h"
 
 struct vidbuf {
     size_t len;
@@ -104,21 +106,34 @@ void render(int sockfd, struct dimensions* dim){
 
                 // endprog
                 const size_t remaining = SENDBUF_SZ - offset;
-                retval = snprintf(sendbuf + offset, remaining, "PX %" PRId32 " %" PRId32 " %02" PRIx32 "\n", i+dim->x, j+dim->y , gg);
-                if(retval < 0 || retval > remaining){
-          //          printf("%d\n",retval);
-                    break;
-                }
-                offset += retval;
+                size_t index = 0;
+                //retval = snprintf(sendbuf + offset, remaining, "PX %" PRId32 " %" PRId32 " %02" PRIx32 "\n", i+dim->x, j+dim->y , gg);
+                memcpy(sendbuf + offset, "PX ", 3);
+                index += 3;
+
+                memcpy(sendbuf + offset+index, DEC_LUT[i+dim->x].str, DEC_LUT[i+dim->x].len);
+                index+=DEC_LUT[i+dim->x].len;
+                sendbuf[offset+index] = ' ';
+                index++;
+                memcpy(sendbuf + offset+index, DEC_LUT[j+dim->y].str, DEC_LUT[j+dim->y].len);
+                index+=DEC_LUT[j+dim->y].len;
+                sendbuf[offset+index] = ' ';
+                index++;
+
+                memcpy(sendbuf + offset+index, HEX_LUT2[gg], 2);
+                index+=4;
+                sendbuf[offset+index] = '\n';
+                index++;
+
+                offset += index;
                 if(offset > SENDBUF_SZ){
            //         printf("%zd\n",offset);
                     break;
                 }
             }
+            sendbuf[offset] = 0;
+            send(sockfd, sendbuf, offset, 0);
         }
-        sendbuf[offset] = 0;
-        //puts(sendbuf);
-        send(sockfd, sendbuf, offset, 0);
     }
     // never gets here
     free(sendbuf);
